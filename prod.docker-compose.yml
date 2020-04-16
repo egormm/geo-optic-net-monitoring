@@ -1,30 +1,37 @@
-version: "3"
+version: "2.4"
 
 services:
   web:
     container_name: web
     build: ./docker/nginx
     networks:
-      - whitenetwork
+      - gonm_network
     volumes:
-      - static_data:/usr/src/whitenet/static
+      - static_data:/usr/src/gonm/static
     ports:
       - 80:80
     depends_on:
-      - app
+      app:
+        condition: service_healthy
 
   app:
     #    container_name: app
     build:
       context: .
-      dockerfile: docker/python/prod.Dockerfile
+      dockerfile: docker/python/Dockerfile
     networks:
-      - whitenetwork
+      - gonm_network
     volumes:
       - static_data:/opt/whitenet/web/static
     expose:
       - "8000"
     command: ["gunicorn", "app.wsgi:application", "-w", "4", "-b", "0.0.0.0:8000"]
+    healthcheck:
+      test: curl --fail -s http://localhost:8000/ping/ || exit 1
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 3s
     env_file:
       - app/.prod.env
     depends_on:
@@ -34,7 +41,7 @@ services:
     image: mdillon/postgis:11-alpine
     container_name: db
     networks:
-      - whitenetwork
+      - gonm_network
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
@@ -48,5 +55,5 @@ volumes:
   static_data:
 
 networks:
-  whitenetwork:
+  gonm_network:
     driver: bridge
