@@ -11,7 +11,8 @@ services:
     ports:
       - 80:80
     depends_on:
-      - app
+      app:
+        condition: service_healthy
 
   app:
     container_name: app
@@ -26,6 +27,12 @@ services:
       - "8000"
     #    command: ["python", "manage.py", "runserver",  "0.0.0.0:8000"]
     command: ["gunicorn", "app.wsgi:application", "-b", "0.0.0.0:8000"]
+    healthcheck:
+      test: curl --fail -s http://localhost:8000/ping/ || exit 1
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 3s
     env_file:
       - app/.docker.env
     depends_on:
